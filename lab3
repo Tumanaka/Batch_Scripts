@@ -1,0 +1,154 @@
+rem частина 1
+
+@echo off
+cd /home/user/Desktop
+
+rem створюємо структуру каталогів
+
+mkdir -p лабораторні/пз-22-3/Шестерніна Н.Л/командна\ строка/.прихована\ папка
+mkdir -p лабораторні/пз-22-3/Шестерніна Н.Л/командна\ строка/неприхована\ папка
+
+rem робимо папку прихована папка прихованною 
+
+attrib +h "лабораторні\пз-22-3\Шестерніна Н.Л\командна строка\.прихована папка"
+
+rem cспрямовуємо вивід консолі до файла copyhelp.txt
+
+xcopy /? > "лабораторні\пз-22-3\Шестерніна Н.Л\командна строка\не прихована папка\copyhelp.txt"
+
+rem копіюємо файл до каталогу прихована папка
+
+xcopy "лабораторні\пз-22-3\Шестерніна Н.Л\командна строка\не прихована папка\copyhelp.txt" "лабораторні\пз-22-3\Шестерніна Н.Л\командна строка\прихована папка\copied_copyhelp.txt"
+
+rem створюємо batch файл, який виконує ті самі операції 
+
+mkdir "лабораторні\пз-22-3\Шестерніна Н.Л\командна строка\прихована папка"
+mkdir "лабораторні\пз-22-3\Шестерніна Н.Л\командна строка\не прихована папка"
+
+attrib +h "лабораторні\пз-22-3\Шестерніна Н.Л\командна строка\прихована папка"
+
+
+xcopy "лабораторні\пз-22-3\Шестерніна Н.Л\командна строка\не прихована папка\copyhelp.txt" "лабораторні\пз-22-3\Шестерніна Н.Л\командна строка\Скрытая папка\copied_copyhelp.txt"
+
+rem оскремий batch-файл, що відкриває файл зі звітом 
+
+@echo off
+start /wait "Нове вікно" "C:/home/user/Desktop\звіт.docx"
+
+rem частина 2 варіант 1 підрахувати сумарний обсяг файлів в каталозі 
+
+@echo off
+setlocal enableextensions
+
+rem змінна для збереження шляху каталогу
+set "dirpath="
+
+rem змінна для збереження атрибутів файлів
+set "fileattrs=/a"
+
+rem змінна для збереження режиму підказки
+set "helpmode="
+
+rem розбір параметрів командного рядка
+:parse_params
+if "%~1"=="" goto :run_program
+if "%~1"=="/?" (
+  set "helpmode=1"
+  shift
+  goto :parse_params
+)
+if "%~1"=="/a" (
+  set "fileattrs=%fileattrs% %~1"
+  shift
+  goto :parse_params
+)
+if "%~1"=="/s" (
+  set "fileattrs=%fileattrs% %~1"
+  shift
+  goto :parse_params
+)
+if not defined dirpath (
+  set "dirpath=%~1"
+  shift
+  goto :parse_params
+)
+
+rem вивід підказки, якщо відповідний параметр вказаний
+if defined helpmode (
+  echo Підрахунок обсягу файлів в каталозі та його підкаталогах.
+  echo.
+  echo Синтаксис:
+  echo   %~nx0 [/a] [/s] <каталог>
+  echo.
+  echo Параметри:
+  echo   /a - враховувати атрибути файлів 
+  echo   /s - враховувати також підкаталоги
+  echo   <каталог> - шлях до каталогу, в якому потрібно підрахувати обсяг файлів
+  echo.
+  echo Приклад:
+  echo   %~nx0 /s "C:\home\user\Desktop"
+  echo.
+  goto :end_program
+)
+
+rem перевірка, чи вказано шлях до каталогу
+if not defined dirpath (
+  echo Помилка: не вказано шлях до каталогу.
+  echo Використайте параметр /? для отримання довідки.
+  goto :end_program
+)
+
+rem перевірка, чи вказаний шлях існує
+if not exist "%dirpath%" (
+  echo Помилка: вказаний каталог не існує.
+  echo Використайте параметр /? для отримання довідки.
+  goto :end_program
+)
+
+:run_program
+rem змінна для збереження сумарного обсягу файлів
+set /a "total_size=0"
+
+rem виклик рекурсивної функції для підрахунку обсягу файлів у каталозі та його підкаталогах
+call :count_files "%dirpath%"
+
+echo Сумарний обсяг файлів: %total_size% байт
+
+:end_program
+endlocal
+goto :eof
+
+rem рекурсивна функція для підрахунку обсягу файлів у каталозі та його підкаталогах
+:count_files
+for /f "delims=" %%f in ('dir %fileattrs% /b /a-d "%~1"') do (
+set /a "file_size=%%~zf"
+set /a "total_size+=file_size"
+)
+if "%~2"=="s" (
+for /f "delims=" %%d in ('dir %fileattrs% /b /ad "%~1"') do (
+call :count_files "%~1%%~d" s
+)
+)
+goto :eof
+:end_program
+endlocal
+exit /b %errorlevel%
+
+:run_program
+rem перевірка, чи вказаний каталог існує
+if not exist "%dirpath%" (
+echo Помилка: вказаний каталог не існує.
+goto :end_program
+)
+
+rem підрахунок обсягу файлів у каталозі та його підкаталогах
+set "total_size=0"
+for /r "%dirpath%" %%f in (%fileattrs%) do (
+set /a "total_size+=%%~zf"
+)
+
+rem вивід результату
+echo Сумарний обсяг файлів у каталозі "%dirpath%" та його підкаталогах: %total_size% байт
+:end_program
+endlocal
+exit /b %errorlevel%
